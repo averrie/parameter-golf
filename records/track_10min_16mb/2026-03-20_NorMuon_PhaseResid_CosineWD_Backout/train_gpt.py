@@ -57,7 +57,7 @@ class Hyperparameters:
     iterations = int(os.environ.get("ITERATIONS", 20000))
     warmdown_iters = int(os.environ.get("WARMDOWN_ITERS", 3000))
     warmup_steps = int(os.environ.get("WARMUP_STEPS", 20))
-    train_batch_tokens = int(os.environ.get("TRAIN_BATCH_TOKENS", 524_288))
+    train_batch_tokens = int(os.environ.get("TRAIN_BATCH_TOKENS", 786_432))
     train_seq_len = int(os.environ.get("TRAIN_SEQ_LEN", 2048))
     max_wallclock_seconds = float(os.environ.get("MAX_WALLCLOCK_SECONDS", 600.0))
     qk_gain_init = float(os.environ.get("QK_GAIN_INIT", 1.5))
@@ -106,6 +106,7 @@ class Hyperparameters:
     ttt_chunk_size = int(os.environ.get("TTT_CHUNK_SIZE", 256))
     ttt_eval_seq_len = int(os.environ.get("TTT_EVAL_SEQ_LEN", 2048))
     ttt_batch_size = int(os.environ.get("TTT_BATCH_SIZE", 16))
+
 
 # -----------------------------
 # MUON OPTIMIZER
@@ -1054,7 +1055,6 @@ def run_ttt_lora(
     return vl, float((loss_sum.item() / math.log(2.0)) / byte_sum.item())
 
 
-
 # -----------------------------
 # SLIDING WINDOW EVAL
 # -----------------------------
@@ -1354,7 +1354,9 @@ def main() -> None:
     log0(f"model_params:{n_params}")
     log0(f"world_size:{world_size} grad_accum_steps:{grad_accum_steps}")
     log0("sdp_backends:cudnn=False flash=True mem_efficient=False math=False")
-    log0(f"attention_mode:gqa num_heads:{args.num_heads} num_kv_heads:{args.num_kv_heads}")
+    log0(
+        f"attention_mode:gqa num_heads:{args.num_heads} num_kv_heads:{args.num_kv_heads}"
+    )
     log0(
         f"tie_embeddings:{args.tie_embeddings} embed_lr:{token_lr} "
         f"head_lr:{args.head_lr if base_model.lm_head is not None else 0.0} "
@@ -1608,7 +1610,9 @@ def main() -> None:
         quant_file_bytes = os.path.getsize("final_model.int8.ptz")
         code_bytes = len(code.encode("utf-8"))
         log0(f"Serialized model int6+{_COMPRESSOR}: {quant_file_bytes} bytes")
-        log0(f"Total submission size int6+{_COMPRESSOR}: {quant_file_bytes + code_bytes} bytes")
+        log0(
+            f"Total submission size int6+{_COMPRESSOR}: {quant_file_bytes + code_bytes} bytes"
+        )
 
     if distributed:
         dist.barrier()
