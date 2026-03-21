@@ -1,0 +1,12 @@
+{
+  "author": "averrie",
+  "github_id": "averrie",
+  "name": "NorMuon + PhaseResid + CosineWD + Backout + LoRA TTT",
+  "blurb": "Extends the baseline train_gpt.py with 8 training improvements (NorMuon, phase-transition resid_mix, cosine WD, backout, RoPE 50K, softcap 20, momentum cooldown, cautious WD) and 6 architecture upgrades (10 layers, 3x MLP, SmearGate, BigramHash, SWA, orthogonal init). Eval: causal LoRA TTT + sliding window. Compression: int5-MLP/int6-attn, magnitude pruning 5%, zstd-22.",
+  "date": "2026-03-20",
+  "track": "10min-16mb",
+  "val_loss": null,
+  "val_bpb": null,
+  "bytes_total": null,
+  "bytes_code": null
+}
