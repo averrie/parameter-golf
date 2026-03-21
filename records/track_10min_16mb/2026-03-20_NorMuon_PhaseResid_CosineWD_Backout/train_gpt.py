@@ -90,8 +90,8 @@ class Hyperparameters:
     grad_clip_norm = float(os.environ.get("GRAD_CLIP_NORM", 0.3))
     weight_decay = float(os.environ.get("WEIGHT_DECAY", 0.04))
 
-    eval_stride = int(os.environ.get("EVAL_STRIDE", 64))
-    eval_batch_seqs = int(os.environ.get("EVAL_BATCH_SEQS", 32))
+    eval_stride = int(os.environ.get("EVAL_STRIDE", 128))
+    eval_batch_seqs = int(os.environ.get("EVAL_BATCH_SEQS", 64))
 
     bigram_vocab_size = int(os.environ.get("BIGRAM_VOCAB_SIZE", 10240))
     bigram_dim = int(os.environ.get("BIGRAM_DIM", 128))
@@ -1627,7 +1627,27 @@ def main() -> None:
         dequantize_state_dict_int6(qs["w"], qs["m"], sd_cpu), strict=True
     )
 
-    # 1. Sliding window eval (comparison metric on quantized model)
+    # 1. LoRA TTT (competition score — causal: scores each chunk before training on it)
+    torch._dynamo.reset()
+    torch.cuda.synchronize()
+    t_ttt = time.perf_counter()
+    ttt_loss, ttt_bpb = run_ttt_lora(
+        args,
+        base_model,
+        rank,
+        world_size,
+        device,
+        base_bytes_lut,
+        has_leading_space_lut,
+        is_boundary_token_lut,
+    )
+    torch.cuda.synchronize()
+    log0(
+        f"final_ttt_lora val_loss:{ttt_loss:.4f} val_bpb:{ttt_bpb:.4f} eval_time:{1000.0*(time.perf_counter()-t_ttt):.0f}ms"
+    )
+    log0(f"final_ttt_lora_exact val_loss:{ttt_loss:.8f} val_bpb:{ttt_bpb:.8f}")
+
+    # 2. Sliding window eval (comparison metric)
     torch.cuda.synchronize()
     t_sw = time.perf_counter()
     if args.eval_stride > 0:
@@ -1649,26 +1669,6 @@ def main() -> None:
             f"final_sliding_window val_loss:{sw_loss:.4f} val_bpb:{sw_bpb:.4f} eval_time:{1000.0*(time.perf_counter()-t_sw):.0f}ms"
         )
         log0(f"final_sliding_window_exact val_loss:{sw_loss:.8f} val_bpb:{sw_bpb:.8f}")
-
-    # 2. LoRA TTT (competition score — causal: scores each chunk before training on it)
-    torch._dynamo.reset()
-    torch.cuda.synchronize()
-    t_ttt = time.perf_counter()
-    ttt_loss, ttt_bpb = run_ttt_lora(
-        args,
-        base_model,
-        rank,
-        world_size,
-        device,
-        base_bytes_lut,
-        has_leading_space_lut,
-        is_boundary_token_lut,
-    )
-    torch.cuda.synchronize()
-    log0(
-        f"final_ttt_lora val_loss:{ttt_loss:.4f} val_bpb:{ttt_bpb:.4f} eval_time:{1000.0*(time.perf_counter()-t_ttt):.0f}ms"
-    )
-    log0(f"final_ttt_lora_exact val_loss:{ttt_loss:.8f} val_bpb:{ttt_bpb:.8f}")
 
     if distributed:
         dist.destroy_process_group()
