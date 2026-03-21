@@ -1442,6 +1442,9 @@ def dequantize_mixed_int6(
 def main() -> None:
     global zeropower_via_newtonschulz5
 
+    # Progressive seq_len + validation creates many tensor shapes; raise cache limit
+    torch._dynamo.config.cache_size_limit = 32
+
     code = Path(__file__).read_text(encoding="utf-8")
     args = Hyperparameters()
     if sys.platform != "win32":
