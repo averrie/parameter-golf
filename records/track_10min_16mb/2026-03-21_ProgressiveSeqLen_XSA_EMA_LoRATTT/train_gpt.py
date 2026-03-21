@@ -1393,11 +1393,6 @@ def mixed_quantize_int6(state_dict: dict[str, Tensor], int6_cats: set[str]):
             result[name] = t.float()
             meta[name] = "passthrough_ctrl"
             continue
-        # FP16 passthrough for tok_emb
-        if "tok_emb" in name:
-            result[name] = t.to(torch.float16).contiguous()
-            meta[name] = "passthrough_fp16"
-            continue
         if cat in int6_cats and t.ndim >= 1:
             q, s = quantize_int6_per_row(t)
             result[name + ".q"] = q
